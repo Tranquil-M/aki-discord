@@ -62,8 +62,16 @@ class Akinatoror(commands.Cog):
 
             correct = WinCheck(interaction.user)
 
-            await thread.send(embed=message_embed, view=correct)
+            last_message = await thread.send(embed=message_embed, view=correct)
             await correct.wait()
+
+            if correct.ans == True:
+                message_embed.set_footer(text="✅ Correct")
+            else:
+                message_embed.set_footer(text="👎 Incorrect")
+
+            await last_message.edit(embed=message_embed, view=None)
+
             return correct.ans
 
         except Exception as e:
