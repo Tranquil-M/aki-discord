@@ -31,8 +31,10 @@ class Akinatoror(commands.Cog):
                     await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
                 last_message = await interaction.followup.send(embed=self.message_embed, view=selection)
 
+                selection.game_message = last_message
+
                 await selection.wait()
-                
+
                 last_choice = selection.ans
                 last_question = str(aki)
                 await aki.answer(selection.ans)
@@ -51,7 +53,7 @@ class Akinatoror(commands.Cog):
             return correct.ans
 
         except Exception as e:
-            print(e)
+            return None
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -66,6 +68,8 @@ class Akinatoror(commands.Cog):
                 result = await self.main_loop(interaction)
                 if result == True:
                     break
+                if result is None:
+                    raise asyncio.TimeoutError("Failed to answer question in time.")
 
             await interaction.followup.send(f"I'm just that cool 😎")
         except Exception as e:
@@ -77,6 +81,24 @@ class WinCheck(discord.ui.View):
             self.owner = owner
             self.game_message = None
             self.timed_out = False
+
+    async def on_timeout(self):
+        self.timed_out = True
+        self.stop()
+        
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+                
+        if self.game_message:
+            try:
+                embed = self.game_message.embeds[0]
+                embed.title = "Game Timed Out"
+                embed.description = "You took too long to answer. Start a new game with `/aki`!"
+                embed.color = discord.Color.red()
+                await self.game_message.edit(embed=embed, view=self)
+            except discord.HTTPException:
+                pass 
 
     async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user.id == self.owner.id:
@@ -117,6 +139,24 @@ class GamemodeSelection(discord.ui.View):
         )
         return False
 
+    async def on_timeout(self):
+        self.timed_out = True
+        self.stop()
+        
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+                
+        if self.game_message:
+            try:
+                embed = self.game_message.embeds[0]
+                embed.title = "Game Timed Out"
+                embed.description = "You took too long to answer. Start a new game with `/aki`!"
+                embed.color = discord.Color.red()
+                await self.game_message.edit(embed=embed, view=self)
+            except discord.HTTPException:
+                pass 
+
     @discord.ui.button(label="Characters", style=discord.ButtonStyle.primary)
     async def callback_char(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
@@ -151,6 +191,24 @@ class QuestionInterface(discord.ui.View):
             ephemeral=True
         )
         return False
+
+    async def on_timeout(self):
+        self.timed_out = True
+        self.stop()
+        
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+                
+        if self.game_message:
+            try:
+                embed = self.game_message.embeds[0]
+                embed.title = "Game Timed Out"
+                embed.description = "You took too long to answer. Start a new game with `/aki`!"
+                embed.color = discord.Color.red()
+                await self.game_message.edit(embed=embed, view=self)
+            except discord.HTTPException:
+                pass 
 
     @discord.ui.button(label="Yes", style=discord.ButtonStyle.primary, emoji="✅")
     async def callback_yes(self, interaction: discord.Interaction, button: discord.ui.Button):
