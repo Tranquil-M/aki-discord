@@ -20,6 +20,7 @@ class Akinatoror(commands.Cog):
         try:
             aki = Akinator()
             last_message = None
+            last_last_message = None
             last_question = ""
             last_choice = ""
 
@@ -31,6 +32,7 @@ class Akinatoror(commands.Cog):
 
                     if last_message is not None:
                         await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
+                        last_last_message = last_message
                     last_message = await thread.send(embed=message_embed, view=selection)
 
                     selection.game_message = last_message
@@ -42,12 +44,14 @@ class Akinatoror(commands.Cog):
 
                     if selection.ans == "back":
                         await aki.back()
+                        await last_message.delete()
+                        await last_last_message.delete()
+                        last_message = None
                         continue
 
                     await aki.answer(selection.ans)
                 except Exception as e:
                     print(e)
-                    break
 
             if last_message is not None:
                 await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
