@@ -25,7 +25,7 @@ class Akinatoror(commands.Cog):
             await aki.start_game()
             while not aki.win:
                 self.message_embed.title = str(aki)
-                selection = QuestionInterface()
+                selection = QuestionInterface(interaction.user)
 
                 if last_message is not None:
                     await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
@@ -44,7 +44,7 @@ class Akinatoror(commands.Cog):
             self.message_embed.description = aki.description_proposition
             self.message_embed.set_image(url=aki.photo)
 
-            correct = WinCheck()
+            correct = WinCheck(interaction.user)
 
             await interaction.followup.send(embed=self.message_embed, view=correct)
             await correct.wait()
@@ -72,6 +72,22 @@ class Akinatoror(commands.Cog):
             print(e)
 
 class WinCheck(discord.ui.View):
+    def __init__(self, owner: discord.User | discord.Member):
+            super().__init__(timeout=30.0)
+            self.owner = owner
+            self.game_message = None
+            self.timed_out = False
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.owner.id:
+            return True
+            
+        await interaction.response.send_message(
+            "Hey, don't interfere with other's fun!", 
+            ephemeral=True
+        )
+        return False
+
     @discord.ui.button(label="Correct", style=discord.ButtonStyle.primary)
     async def callback_win(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
@@ -85,6 +101,22 @@ class WinCheck(discord.ui.View):
         self.stop()
 
 class GamemodeSelection(discord.ui.View):
+    def __init__(self, owner: discord.User | discord.Member):
+            super().__init__(timeout=30.0)
+            self.owner = owner
+            self.game_message = None
+            self.timed_out = False
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.owner.id:
+            return True
+            
+        await interaction.response.send_message(
+            "Hey, don't interfere with other's fun!", 
+            ephemeral=True
+        )
+        return False
+
     @discord.ui.button(label="Characters", style=discord.ButtonStyle.primary)
     async def callback_char(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
@@ -104,6 +136,22 @@ class GamemodeSelection(discord.ui.View):
         self.stop()
 
 class QuestionInterface(discord.ui.View):
+    def __init__(self, owner: discord.User | discord.Member):
+            super().__init__(timeout=30.0)
+            self.owner = owner
+            self.game_message = None
+            self.timed_out = False
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.owner.id:
+            return True
+            
+        await interaction.response.send_message(
+            "Hey, don't interfere with other's fun!", 
+            ephemeral=True
+        )
+        return False
+
     @discord.ui.button(label="Yes", style=discord.ButtonStyle.primary, emoji="✅")
     async def callback_yes(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
