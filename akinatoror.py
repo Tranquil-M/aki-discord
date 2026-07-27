@@ -64,8 +64,11 @@ class Akinatoror(commands.Cog):
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def aki(self, interaction: discord.Interaction):
         try:
-            await interaction.response.defer()
+            if isinstance(interaction.channel, discord.Thread):
+                await interaction.response.send_message("This command can not be used in threads, sorry! 🫠", ephemeral=True)
+                return
 
+            await interaction.response.defer()
             now = datetime.now(timezone.utc)
             readable_date = now.strftime("%m-%d-%Y %H:%M:%S UTC")
 
