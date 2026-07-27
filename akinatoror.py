@@ -61,7 +61,7 @@ class Akinatoror(commands.Cog):
         print(f"{__name__} is online and ready to start guessing!")
 
     @app_commands.command(name="aki", description="Begins a game of Akinator.")
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
     async def aki(self, interaction: discord.Interaction):
         try:
             if isinstance(interaction.channel, discord.Thread):
