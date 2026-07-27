@@ -1,4 +1,5 @@
 import asyncio
+from datetime import datetime, timezone
 import discord
 import akipy
 from akipy.async_akinator import Akinator
@@ -9,7 +10,7 @@ class Akinatoror(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def main_loop(self, interaction):
+    async def main_loop(self, interaction, thread: discord.Thread):
         self.message_embed = discord.Embed(
             title="",
             description="You have 30 seconds to select an answer.",
@@ -29,7 +30,7 @@ class Akinatoror(commands.Cog):
 
                 if last_message is not None:
                     await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
-                last_message = await interaction.followup.send(embed=self.message_embed, view=selection)
+                last_message = await thread.send(embed=self.message_embed, view=selection)
 
                 selection.game_message = last_message
 
@@ -48,7 +49,7 @@ class Akinatoror(commands.Cog):
 
             correct = WinCheck(interaction.user)
 
-            await interaction.followup.send(embed=self.message_embed, view=correct)
+            await thread.send(embed=self.message_embed, view=correct)
             await correct.wait()
             return correct.ans
 
@@ -62,18 +63,41 @@ class Akinatoror(commands.Cog):
     @app_commands.command(name="aki", description="Begins a game of Akinator.")
     @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
     async def aki(self, interaction: discord.Interaction):
-        await interaction.response.defer()
         try:
-            while True:
-                result = await self.main_loop(interaction)
-                if result == True:
-                    break
-                if result is None:
-                    raise asyncio.TimeoutError("Failed to answer question in time.")
+            await interaction.response.defer()
 
-            await interaction.followup.send(f"I'm just that cool 😎")
+            now = datetime.now(timezone.utc)
+            readable_date = now.strftime("%m-%d-%Y %H:%M:%S UTC")
+
+            thread = await interaction.channel.create_thread(
+                name=f"Akinator - {interaction.user.display_name} - {readable_date}",
+                type=discord.ChannelType.public_thread,
+                auto_archive_duration=60
+            )
+
+            await interaction.followup.send(f"I've made you a thread so you can enjoy your game without convo! Have fun :D <#{thread.id}>")
         except Exception as e:
             print(e)
+
+        try:
+            while True:
+                result = await self.main_loop(interaction, thread)
+                if result == True:
+                    await thread.send(f"I'm just that cool 😎")
+                    break
+                elif result == False:
+                    await thread.send(f"Damn it! Let me try again...")
+                elif result is None:
+                    break
+
+        except Exception as e:
+            print(e)
+        finally:
+            await asyncio.sleep(5)
+            try:
+                await thread.edit(archived=True, locked=True)
+            except discord.HTTPException:
+                pass
 
 class WinCheck(discord.ui.View):
     def __init__(self, owner: discord.User | discord.Member):
