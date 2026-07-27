@@ -11,7 +11,7 @@ class Akinatoror(commands.Cog):
         self.bot = bot
 
     async def main_loop(self, interaction, thread: discord.Thread):
-        self.message_embed = discord.Embed(
+        message_embed = discord.Embed(
             title="",
             description="You have 30 seconds to select an answer.",
             color=discord.Color.blue()
@@ -25,12 +25,12 @@ class Akinatoror(commands.Cog):
 
             await aki.start_game()
             while not aki.win:
-                self.message_embed.title = str(aki)
+                message_embed.title = str(aki)
                 selection = QuestionInterface(interaction.user)
 
                 if last_message is not None:
                     await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
-                last_message = await thread.send(embed=self.message_embed, view=selection)
+                last_message = await thread.send(embed=message_embed, view=selection)
 
                 selection.game_message = last_message
 
@@ -43,13 +43,13 @@ class Akinatoror(commands.Cog):
             if last_message is not None:
                 await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
                 
-            self.message_embed.title = str(aki)
-            self.message_embed.description = aki.description_proposition
-            self.message_embed.set_image(url=aki.photo)
+            message_embed.title = str(aki)
+            message_embed.description = aki.description_proposition
+            message_embed.set_image(url=aki.photo)
 
             correct = WinCheck(interaction.user)
 
-            await thread.send(embed=self.message_embed, view=correct)
+            await thread.send(embed=message_embed, view=correct)
             await correct.wait()
             return correct.ans
 
