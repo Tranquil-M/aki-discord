@@ -25,21 +25,29 @@ class Akinatoror(commands.Cog):
 
             await aki.start_game()
             while not aki.win:
-                message_embed.title = str(aki)
-                selection = QuestionInterface(interaction.user, aki)
+                try:
+                    message_embed.title = str(aki)
+                    selection = QuestionInterface(interaction.user, aki)
 
-                if last_message is not None:
-                    await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
-                last_message = await thread.send(embed=message_embed, view=selection)
+                    if last_message is not None:
+                        await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
+                    last_message = await thread.send(embed=message_embed, view=selection)
 
-                selection.game_message = last_message
+                    selection.game_message = last_message
 
-                await selection.wait()
+                    await selection.wait()
 
-                last_choice = selection.ans
-                last_question = str(aki)
+                    last_choice = selection.ans
+                    last_question = str(aki)
 
-                await aki.answer(selection.ans)
+                    if selection.ans == "back":
+                        await aki.back()
+                        continue
+
+                    await aki.answer(selection.ans)
+                except Exception as e:
+                    print(e)
+                    break
 
             if last_message is not None:
                 await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
