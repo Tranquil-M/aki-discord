@@ -26,7 +26,7 @@ class Akinatoror(commands.Cog):
             await aki.start_game()
             while not aki.win:
                 message_embed.title = str(aki)
-                selection = QuestionInterface(interaction.user)
+                selection = QuestionInterface(interaction.user, aki)
 
                 if last_message is not None:
                     await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
@@ -38,6 +38,7 @@ class Akinatoror(commands.Cog):
 
                 last_choice = selection.ans
                 last_question = str(aki)
+
                 await aki.answer(selection.ans)
 
             if last_message is not None:
@@ -203,11 +204,14 @@ class GamemodeSelection(discord.ui.View):
         self.stop()
 
 class QuestionInterface(discord.ui.View):
-    def __init__(self, owner: discord.User | discord.Member):
-            super().__init__(timeout=30.0)
-            self.owner = owner
-            self.game_message = None
-            self.timed_out = False
+    def __init__(self, owner: discord.User | discord.Member, aki):
+        super().__init__(timeout=30.0)
+        self.owner = owner
+        self.game_message = None
+        self.timed_out = False
+        self.aki = aki
+        if int(self.aki.step) < 1:
+            self.remove_item(self.callback_back)
 
     async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user.id == self.owner.id:
@@ -266,12 +270,12 @@ class QuestionInterface(discord.ui.View):
         await interaction.response.defer()
         self.ans = "probably not"
         self.stop()
- 
-    #@discord.ui.button(label="Go Back", style=discord.ButtonStyle.primary, emoji="⬅️")
-    #async def callback_back(self, interaction: discord.Interaction, button: discord.ui.Button):
-    #    await interaction.response.defer()
-    #    self.ans = 5
-    #    self.stop()
- 
+
+    @discord.ui.button(label="Go Back", style=discord.ButtonStyle.primary, emoji="⬅️")
+    async def callback_back(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.ans = "back"
+        self.stop()
+     
 async def setup(bot):
     await bot.add_cog(Akinatoror(bot))
