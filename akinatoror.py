@@ -10,7 +10,7 @@ class Akinatoror(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def main_loop(self, interaction, thread: discord.Thread, game_mode: str):
+    async def main_loop(self, interaction, thread: discord.Thread, game_mode: str, child_mode: bool):
         message_embed = discord.Embed(
             title="",
             description="You have 30 seconds to select an answer.",
@@ -25,7 +25,7 @@ class Akinatoror(commands.Cog):
             last_choice = ""
             message_embed.description = "You have 30 seconds to select an answer."
 
-            await aki.start_game(game_mode=game_mode)
+            await aki.start_game(game_mode=game_mode, child_mode=child_mode)
             while not aki.win:
                 try:
                     message_embed.title = str(aki)
@@ -127,8 +127,27 @@ class Akinatoror(commands.Cog):
 
             await last_message.edit(embed=message_embed, view=None)
 
+            message_embed = discord.Embed(
+                title = "Would you like to play in child mode? (No NSFW)",
+                description = "You have 30 seconds to select an answer.",
+                color=discord.Color.blue(),
+            )
+            child = ChildmodeSelection(interaction.user)
+            last_message = await thread.send(embed=message_embed, view=child)
+
+            await child.wait()
+
+            if child.ans:
+                message_embed.description = "🫰 Family friendly please!"
+                message_embed.color = discord.Color.green()
+            else:
+                message_embed.description = "🚫 No"
+                message_embed.color = discord.Color.red()
+
+            await last_message.edit(embed=message_embed, view=None)
+
             while True:
-                result = await self.main_loop(interaction, thread, mode.ans)
+                result = await self.main_loop(interaction, thread, mode.ans, child.ans)
                 if result == True:
                     await thread.send(f"I'm just that cool 😎")
                     break
@@ -191,6 +210,63 @@ class WinCheck(discord.ui.View):
     async def callback_loss(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
         self.ans = False
+        self.stop()
+
+class ChildmodeSelection(discord.ui.View):
+    def __init__(self, owner: discord.User | discord.Member):
+            super().__init__(timeout=30.0)
+            self.owner = owner
+            self.game_message = None
+            self.timed_out = False
+
+    async def interaction_check(self, interaction: discord.Interaction):
+        if interaction.user.id == self.owner.id:
+            return True
+            
+        await interaction.response.send_message(
+            "Hey, don't interfere with other's fun!", 
+            ephemeral=True
+        )
+        return False
+
+    async def on_timeout(self):
+        self.timed_out = True
+        self.stop()
+        
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+                
+        if self.game_message:
+            try:
+                embed = self.game_message.embeds[0]
+                embed.title = "Game Timed Out"
+                embed.description = "You took too long to answer. Start a new game with `/aki`!"
+                embed.color = discord.Color.red()
+                await self.game_message.edit(embed=embed, view=self)
+            except discord.HTTPException:
+                pass 
+
+    @discord.ui.button(label="Yes", style=discord.ButtonStyle.primary)
+    async def callback_yes(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.ans = True
+
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
+        self.stop()
+     
+    @discord.ui.button(label="No", style=discord.ButtonStyle.primary)
+    async def callback_no(self, interaction: discord.Interaction, button: discord.ui.Button):
+        await interaction.response.defer()
+        self.ans = False
+
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
         self.stop()
 
 class GamemodeSelection(discord.ui.View):
