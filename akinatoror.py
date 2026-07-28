@@ -10,7 +10,7 @@ class Akinatoror(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def main_loop(self, interaction, thread: discord.Thread):
+    async def main_loop(self, interaction, thread: discord.Thread, game_mode: str):
         message_embed = discord.Embed(
             title="",
             description="You have 30 seconds to select an answer.",
@@ -18,22 +18,6 @@ class Akinatoror(commands.Cog):
         )
 
         try:
-
-            message_embed.title = "Select a gamemode!"
-            mode = GamemodeSelection(interaction.user)
-            last_message = await thread.send(embed=message_embed, view=mode)
-
-            await mode.wait()
-
-            if mode.ans == "c":
-                message_embed.description = "🧑 Character"
-            elif mode.ans == "a":
-                message_embed.description = "😺 Animal"
-            else:
-                message_embed.description = "🍴 Object"
-
-            await last_message.edit(embed=message_embed, view=None)
-
             aki = Akinator()
             last_message = None
             last_last_message = None
@@ -41,7 +25,7 @@ class Akinatoror(commands.Cog):
             last_choice = ""
             message_embed.description = "You have 30 seconds to select an answer."
 
-            await aki.start_game(game_mode=mode.ans)
+            await aki.start_game(game_mode=game_mode)
             while not aki.win:
                 try:
                     message_embed.title = str(aki)
@@ -122,8 +106,29 @@ class Akinatoror(commands.Cog):
             print(e)
 
         try:
+            message_embed = discord.Embed(
+                title = "Select a gamemode!",
+                description = "You have 30 seconds to select an answer.",
+                color=discord.Color.blue(),
+            )
+            mode = GamemodeSelection(interaction.user)
+            last_message = await thread.send(embed=message_embed, view=mode)
+
+            await mode.wait()
+
+            if mode.ans == "c":
+                message_embed.description = "🧑 Character"
+            elif mode.ans == "a":
+                message_embed.description = "😺 Animal"
+            else:
+                message_embed.description = "🍴 Object"
+
+            message_embed.color = discord.Color.green()
+
+            await last_message.edit(embed=message_embed, view=None)
+
             while True:
-                result = await self.main_loop(interaction, thread)
+                result = await self.main_loop(interaction, thread, mode.ans)
                 if result == True:
                     await thread.send(f"I'm just that cool 😎")
                     break
