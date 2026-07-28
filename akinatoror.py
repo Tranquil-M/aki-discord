@@ -39,6 +39,10 @@ class Akinatoror(commands.Cog):
 
                     await selection.wait()
 
+                    for item in selection.children:
+                        if isinstance(item, discord.ui.Button):
+                            item.disabled = True
+
                     last_choice = selection.ans
                     last_question = str(aki)
 
