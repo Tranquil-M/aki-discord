@@ -18,13 +18,30 @@ class Akinatoror(commands.Cog):
         )
 
         try:
+
+            message_embed.title = "Select a gamemode!"
+            mode = GamemodeSelection(interaction.user)
+            last_message = await thread.send(embed=message_embed, view=mode)
+
+            await mode.wait()
+
+            if mode.ans == "c":
+                message_embed.description = "🧑 Character"
+            elif mode.ans == "a":
+                message_embed.description = "😺 Animal"
+            else:
+                message_embed.description = "🍴 Object"
+
+            await last_message.edit(embed=message_embed, view=None)
+
             aki = Akinator()
             last_message = None
             last_last_message = None
             last_question = ""
             last_choice = ""
+            message_embed.description = "You have 30 seconds to select an answer."
 
-            await aki.start_game()
+            await aki.start_game(game_mode=mode.ans)
             while not aki.win:
                 try:
                     message_embed.title = str(aki)
@@ -79,6 +96,7 @@ class Akinatoror(commands.Cog):
             return correct.ans
 
         except Exception as e:
+            print(e)
             return None
 
     @commands.Cog.listener()
