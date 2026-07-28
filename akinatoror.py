@@ -56,10 +56,6 @@ class Akinatoror(commands.Cog):
 
                     await selection.wait()
 
-                    for item in selection.children:
-                        if isinstance(item, discord.ui.Button):
-                            item.disabled = True
-
                     last_choice = selection.ans
                     last_question = str(aki)
 
@@ -230,19 +226,34 @@ class GamemodeSelection(discord.ui.View):
     @discord.ui.button(label="Characters", style=discord.ButtonStyle.primary)
     async def callback_char(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        self.ans = "c"
+        self.ans = "c" 
+
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
         self.stop()
      
     @discord.ui.button(label="Animals", style=discord.ButtonStyle.primary)
     async def callback_irs(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        self.ans = "a"
+        self.ans = "a" 
+
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
         self.stop()
       
     @discord.ui.button(label="Objects", style=discord.ButtonStyle.primary)
     async def callback_obj(self, interaction: discord.Interaction, button: discord.ui.Button):
         await interaction.response.defer()
-        self.ans = "o"
+        self.ans = "o" 
+
+        for item in self.children:
+            if isinstance(item, discord.ui.Button):
+                item.disabled = True
+
         self.stop()
 
 class QuestionInterface(discord.ui.View):
