@@ -165,12 +165,12 @@ class Akinatoror(commands.Cog):
             except discord.HTTPException:
                 pass
 
-class WinCheck(discord.ui.View):
+class _Base(discord.ui.View):
     def __init__(self, owner: discord.User | discord.Member):
-            super().__init__(timeout=30.0)
-            self.owner = owner
-            self.game_message = None
-            self.timed_out = False
+        super().__init__(timeout=30.0)
+        self.owner = owner
+        self.game_message = None
+        self.timed_out = False
 
     async def on_timeout(self):
         self.timed_out = True
@@ -199,6 +199,11 @@ class WinCheck(discord.ui.View):
             ephemeral=True
         )
         return False
+
+
+class WinCheck(_Base):
+    def __init__(self, owner: discord.User | discord.Member):
+            super().__init__(owner)
 
     @discord.ui.button(label="Correct", style=discord.ButtonStyle.primary)
     async def callback_win(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -212,40 +217,9 @@ class WinCheck(discord.ui.View):
         self.ans = False
         self.stop()
 
-class ChildmodeSelection(discord.ui.View):
+class ChildmodeSelection(_Base):
     def __init__(self, owner: discord.User | discord.Member):
-            super().__init__(timeout=30.0)
-            self.owner = owner
-            self.game_message = None
-            self.timed_out = False
-
-    async def interaction_check(self, interaction: discord.Interaction):
-        if interaction.user.id == self.owner.id:
-            return True
-            
-        await interaction.response.send_message(
-            "Hey, don't interfere with other's fun!", 
-            ephemeral=True
-        )
-        return False
-
-    async def on_timeout(self):
-        self.timed_out = True
-        self.stop()
-        
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-                
-        if self.game_message:
-            try:
-                embed = self.game_message.embeds[0]
-                embed.title = "Game Timed Out"
-                embed.description = "You took too long to answer. Start a new game with `/aki`!"
-                embed.color = discord.Color.red()
-                await self.game_message.edit(embed=embed, view=self)
-            except discord.HTTPException:
-                pass 
+            super().__init__(owner)
 
     @discord.ui.button(label="Yes", style=discord.ButtonStyle.primary)
     async def callback_yes(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -269,40 +243,9 @@ class ChildmodeSelection(discord.ui.View):
 
         self.stop()
 
-class GamemodeSelection(discord.ui.View):
+class GamemodeSelection(_Base):
     def __init__(self, owner: discord.User | discord.Member):
-            super().__init__(timeout=30.0)
-            self.owner = owner
-            self.game_message = None
-            self.timed_out = False
-
-    async def interaction_check(self, interaction: discord.Interaction):
-        if interaction.user.id == self.owner.id:
-            return True
-            
-        await interaction.response.send_message(
-            "Hey, don't interfere with other's fun!", 
-            ephemeral=True
-        )
-        return False
-
-    async def on_timeout(self):
-        self.timed_out = True
-        self.stop()
-        
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-                
-        if self.game_message:
-            try:
-                embed = self.game_message.embeds[0]
-                embed.title = "Game Timed Out"
-                embed.description = "You took too long to answer. Start a new game with `/aki`!"
-                embed.color = discord.Color.red()
-                await self.game_message.edit(embed=embed, view=self)
-            except discord.HTTPException:
-                pass 
+            super().__init__(owner)
 
     @discord.ui.button(label="Characters", style=discord.ButtonStyle.primary)
     async def callback_char(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -337,43 +280,12 @@ class GamemodeSelection(discord.ui.View):
 
         self.stop()
 
-class QuestionInterface(discord.ui.View):
+class QuestionInterface(_Base):
     def __init__(self, owner: discord.User | discord.Member, aki):
-        super().__init__(timeout=30.0)
-        self.owner = owner
-        self.game_message = None
-        self.timed_out = False
+        super().__init__(owner)
         self.aki = aki
-        if int(self.aki.step) < 1:
+        if int(self.aki.step) <= 0:
             self.remove_item(self.callback_back)
-
-    async def interaction_check(self, interaction: discord.Interaction):
-        if interaction.user.id == self.owner.id:
-            return True
-            
-        await interaction.response.send_message(
-            "Hey, don't interfere with other's fun!", 
-            ephemeral=True
-        )
-        return False
-
-    async def on_timeout(self):
-        self.timed_out = True
-        self.stop()
-        
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-                
-        if self.game_message:
-            try:
-                embed = self.game_message.embeds[0]
-                embed.title = "Game Timed Out"
-                embed.description = "You took too long to answer. Start a new game with `/aki`!"
-                embed.color = discord.Color.red()
-                await self.game_message.edit(embed=embed, view=self)
-            except discord.HTTPException:
-                pass 
 
     @discord.ui.button(label="Yes", style=discord.ButtonStyle.primary, emoji="✅")
     async def callback_yes(self, interaction: discord.Interaction, button: discord.ui.Button):
