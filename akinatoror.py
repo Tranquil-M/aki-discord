@@ -1,5 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
+from collections import deque
 import discord
 import akipy
 from akipy.async_akinator import Akinator
@@ -11,43 +12,53 @@ class Akinatoror(commands.Cog):
         self.bot = bot
 
     async def main_loop(self, interaction, thread: discord.Thread, game_mode: str, child_mode: bool):
-        message_embed = discord.Embed(
-            title="",
-            description="You have 30 seconds to select an answer.",
-            color=discord.Color.blue()
-        )
 
         try:
             aki = Akinator()
-            last_message = None
-            last_last_message = None
-            last_question = ""
-            last_choice = ""
-            message_embed.description = "You have 30 seconds to select an answer."
+            messages = deque(maxlen=2)
 
             await aki.start_game(game_mode=game_mode, child_mode=child_mode)
             while not aki.win:
                 try:
-                    message_embed.title = str(aki)
+
+                    message_embed = discord.Embed(
+                        title = str(aki),
+                        description="You have 30 seconds to select an answer.",
+                        color = discord.Color.blue(),
+                    )
+
+                    if len(messages) > 0:
+                        last_question = messages[-1]
+                        await last_question["message"].edit(
+                            embed=discord.Embed(
+                                title = last_question["question"],
+                                description = last_question["choice"],
+                            ),
+                            view=None
+                        )
+
                     selection = QuestionInterface(interaction.user, aki)
 
-                    if last_message is not None:
-                        await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
-                        last_last_message = last_message
-                    last_message = await thread.send(embed=message_embed, view=selection)
-
-                    selection.game_message = last_message
-
+                    question = {
+                        "message": await thread.send(
+                            embed=message_embed,
+                            view=selection,
+                        ),
+                        "question": str(aki),
+                        "choice": None,
+                    }
+                    
                     await selection.wait()
 
-                    last_choice = selection.ans
-                    last_question = str(aki)
+                    question["choice"] = selection.ans
+
+                    messages.append(question)
 
                     if selection.ans == "back":
                         await aki.back()
-                        await last_message.delete()
-                        await last_last_message.delete()
-                        last_message = None
+                        await messages[-1]["message"].delete()
+                        await messages[-2]["message"].delete()
+                        messages.clear()
                         continue
 
                     await aki.answer(selection.ans)
