@@ -177,7 +177,6 @@ class Akinatoror(commands.Cog):
 
             while True:
                 result = await self.main_loop(interaction, thread, mode.ans, child.ans)
-                print(result)
                 if result == True:
                     await thread.send(f"I'm just that cool 😎")
                     break
