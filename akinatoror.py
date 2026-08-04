@@ -77,7 +77,7 @@ class Akinatoror(commands.Cog):
             message_embed.set_image(url = aki.photo)
 
             win_check = WinCheck(interaction.user)
-            proposition = await thread.send(embed=message_embed, view=correct)
+            proposition = await thread.send(embed=message_embed, view=win_check)
 
             await win_check.wait()
 
@@ -202,6 +202,9 @@ class _Base(discord.ui.View):
         self.game_message = None
         self.timed_out = False
         self.ans = None
+        self.cd_mapping = commands.CooldownMapping.from_cooldown(
+            1, 1.0, commands.BucketType.user
+        )
 
     async def on_timeout(self):
         self.timed_out = True
@@ -221,16 +224,23 @@ class _Base(discord.ui.View):
             except discord.HTTPException:
                 pass 
 
-
     async def interaction_check(self, interaction: discord.Interaction):
-        if interaction.user.id == self.owner.id:
-            return True
-            
-        await interaction.response.send_message(
-            "Hey, don't interfere with other's fun!", 
-            ephemeral=True
-        )
-        return False
+        if interaction.user.id != self.owner.id:
+            await interaction.response.send_message(
+                "Hey, don't interfere with other's fun!", 
+                ephemeral=True
+            )
+            return False
+
+        bucket = self.cd_mapping.get_bucket(interaction.message)
+        retry_after = bucket.update_rate_limit()
+
+        if retry_after:
+          await interaction.response.send_message(
+              f"Slow down! Try again in {retry_after:.1f} seconds.", ephemeral=True
+          )
+          return False
+        return True     
 
 
 class WinCheck(_Base):
