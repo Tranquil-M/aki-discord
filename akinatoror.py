@@ -11,80 +11,89 @@ class Akinatoror(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
 
-    async def main_loop(self, interaction, thread: discord.Thread, game_mode: str, child_mode: bool):
+    async def edit_last_question(self, messages):
+        if len(messages) > 0:
+            last_question = messages[-1]
+            await last_question["message"].edit(
+                embed=discord.Embed(
+                    title = last_question["question"],
+                    description = last_question["choice"],
+                ),
+                view=None
+            )
 
+    async def main_loop(self, interaction, thread: discord.Thread, game_mode: str, child_mode: bool):
         try:
             aki = Akinator()
             messages = deque(maxlen=2)
 
             await aki.start_game(game_mode=game_mode, child_mode=child_mode)
+
             while not aki.win:
-                try:
+                message_embed = discord.Embed(
+                    title = str(aki),
+                    description="You have 30 seconds to select an answer.",
+                    color = discord.Color.blue(),
+                )
 
-                    message_embed = discord.Embed(
-                        title = str(aki),
-                        description="You have 30 seconds to select an answer.",
-                        color = discord.Color.blue(),
-                    )
+                await self.edit_last_question(messages)
 
-                    if len(messages) > 0:
-                        last_question = messages[-1]
-                        await last_question["message"].edit(
-                            embed=discord.Embed(
-                                title = last_question["question"],
-                                description = last_question["choice"],
-                            ),
-                            view=None
-                        )
+                selection = QuestionInterface(interaction.user, aki)
 
-                    selection = QuestionInterface(interaction.user, aki)
-
-                    question = {
-                        "message": await thread.send(
-                            embed=message_embed,
-                            view=selection,
-                        ),
-                        "question": str(aki),
-                        "choice": None,
-                    }
-                    
-                    await selection.wait()
-
-                    question["choice"] = selection.ans
-
-                    messages.append(question)
-
-                    if selection.ans == "back":
-                        await aki.back()
-                        await messages[-1]["message"].delete()
-                        await messages[-2]["message"].delete()
-                        messages.clear()
-                        continue
-
-                    await aki.answer(selection.ans)
-                except Exception as e:
-                    print(e)
-
-            if last_message is not None:
-                await last_message.edit(embed=discord.Embed(title=last_question, description=last_choice), view=None)
+                question = {
+                    "message": await thread.send(
+                        embed=message_embed,
+                        view=selection,
+                    ),
+                    "question": str(aki),
+                    "choice": None,
+                }
                 
-            message_embed.title = str(aki)
-            message_embed.description = aki.description_proposition
-            message_embed.set_image(url=aki.photo)
+                await selection.wait()
 
-            correct = WinCheck(interaction.user)
+                if selection.timed_out or selection.ans is None:
+                    return "timeout"
 
-            last_message = await thread.send(embed=message_embed, view=correct)
-            await correct.wait()
+                question["choice"] = selection.ans
 
-            if correct.ans == True:
+                messages.append(question)
+
+                if selection.ans == "back":
+                    await aki.back()
+                    await messages[-1]["message"].delete()
+                    await messages[-2]["message"].delete()
+                    messages.clear()
+                    continue
+
+                await aki.answer(selection.ans)
+
+            await self.edit_last_question(messages)
+
+            message_embed = discord.Embed(
+                title = str(aki),
+                description = aki.description_proposition,
+                color = discord.Color.yellow()
+            )
+            message_embed.set_image(url = aki.photo)
+
+            win_check = WinCheck(interaction.user)
+            proposition = await thread.send(embed=message_embed, view=correct)
+
+            await win_check.wait()
+
+            if win_check.ans is None:
+                return "timeout"
+
+            if win_check.ans == True:
                 message_embed.set_footer(text="✅ Correct")
+                message_embed.color = discord.Color.green()
             else:
                 message_embed.set_footer(text="👎 Incorrect")
+                message_embed.color = discord.Color.red()
 
-            await last_message.edit(embed=message_embed, view=None)
+            await proposition.edit(embed=message_embed, view=None)
 
-            return correct.ans
+            return win_check.ans
 
         except Exception as e:
             print(e)
@@ -124,8 +133,12 @@ class Akinatoror(commands.Cog):
             )
             mode = GamemodeSelection(interaction.user)
             last_message = await thread.send(embed=message_embed, view=mode)
+            mode.game_message = last_message
 
             await mode.wait()
+
+            if mode.ans is None:
+                return
 
             if mode.ans == "c":
                 message_embed.description = "🧑 Character"
@@ -143,10 +156,15 @@ class Akinatoror(commands.Cog):
                 description = "You have 30 seconds to select an answer.",
                 color=discord.Color.blue(),
             )
+
             child = ChildmodeSelection(interaction.user)
             last_message = await thread.send(embed=message_embed, view=child)
+            child.game_message = last_message
 
             await child.wait()
+
+            if child.ans is None:
+                return
 
             if child.ans:
                 message_embed.description = "🫰 Family friendly please!"
@@ -159,12 +177,13 @@ class Akinatoror(commands.Cog):
 
             while True:
                 result = await self.main_loop(interaction, thread, mode.ans, child.ans)
+                print(result)
                 if result == True:
                     await thread.send(f"I'm just that cool 😎")
                     break
                 elif result == False:
                     await thread.send(f"Damn it! Let me try again...")
-                elif result is None:
+                elif result == "timeout":
                     break
 
         except Exception as e:
@@ -182,6 +201,7 @@ class _Base(discord.ui.View):
         self.owner = owner
         self.game_message = None
         self.timed_out = False
+        self.ans = None
 
     async def on_timeout(self):
         self.timed_out = True
@@ -200,6 +220,7 @@ class _Base(discord.ui.View):
                 await self.game_message.edit(embed=embed, view=self)
             except discord.HTTPException:
                 pass 
+
 
     async def interaction_check(self, interaction: discord.Interaction):
         if interaction.user.id == self.owner.id:
