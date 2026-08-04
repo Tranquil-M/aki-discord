@@ -99,13 +99,135 @@ class Akinatoror(commands.Cog):
             print(e)
             return None
 
+    async def main_loop_single_message(
+        self,
+        interaction: discord.Interaction,
+        game_mode: str,
+        child_mode: bool,
+        game_message
+    ):
+        try:
+            aki = Akinator()
+    
+            await aki.start_game(
+                game_mode=game_mode,
+                child_mode=child_mode
+            )
+
+            while not aki.win:
+                embed = discord.Embed(
+                    title=str(aki),
+                    description="You have 30 seconds to select an answer.",
+                    color=discord.Color.blue(),
+                )
+    
+                selection = QuestionInterface(interaction.user, aki)
+                await game_message.edit(
+                    embed=embed,
+                    view=selection
+                )
+    
+                selection.game_message = game_message
+                await selection.wait()
+    
+                if selection.ans is None:
+                    return "timeout"
+    
+                if selection.ans == "back":
+                    await aki.back()
+                    continue
+    
+                await aki.answer(selection.ans)
+    
+            embed = discord.Embed(
+                title=str(aki),
+                description=aki.description_proposition,
+                color=discord.Color.yellow(),
+            )
+            embed.set_image(url=aki.photo)
+    
+            win_check = WinCheck(interaction.user)
+    
+            await game_message.edit(
+                embed=embed,
+                view=win_check,
+            )
+    
+            win_check.game_message = game_message
+            await win_check.wait()
+    
+            if win_check.ans is None:
+                return "timeout"
+    
+            if win_check.ans:
+                embed.color = discord.Color.green()
+                embed.set_footer(text="✅ Correct")
+            else:
+                embed.color = discord.Color.red()
+                embed.set_footer(text="👎 Incorrect")
+    
+            await game_message.edit(
+                embed=embed,
+                view=None,
+            )
+    
+            return win_check.ans
+    
+        except Exception as e:
+            print(e)
+            return None
+
     @commands.Cog.listener()
     async def on_ready(self):
         print(f"{__name__} is online and ready to start guessing!")
 
-    @app_commands.command(name="aki", description="Begins a game of Akinator.")
-    @app_commands.allowed_contexts(guilds=True, dms=False, private_channels=True)
-    async def aki(self, interaction: discord.Interaction):
+    async def dm_cmd(self, interaction: discord.Interaction):
+        await interaction.response.defer()
+
+        message_embed = discord.Embed(
+            title = "Select a gamemode!",
+            description = "You have 30 seconds to select an answer.",
+            color=discord.Color.blue(),
+        )
+        mode = GamemodeSelection(interaction.user)
+        setup_message = await interaction.followup.send(embed=message_embed, view=mode)
+        mode.game_message = setup_message
+
+        await mode.wait()
+
+        if mode.ans is None:
+            return
+
+        message_embed = discord.Embed(
+            title = "Would you like to play in child mode? (No NSFW)",
+            description = "You have 30 seconds to select an answer.",
+            color=discord.Color.blue(),
+        )
+
+        child = ChildmodeSelection(interaction.user)
+        await setup_message.edit(embed=message_embed, view=child)
+        child.game_message = setup_message
+
+        await child.wait()
+
+        if child.ans is None:
+            return
+
+        while True:
+            result = await self.main_loop_single_message(interaction, mode.ans, child.ans, setup_message)
+            if result:
+                break
+            elif result == False:
+                await asyncio.sleep(1.5)
+                await interaction.followup.send("Darn! I'll get it next time...")
+                break
+            elif result == "timeout":
+                break
+
+
+
+
+    async def server_cmd(self, interaction: discord.Interaction):
         try:
             if isinstance(interaction.channel, discord.Thread):
                 await interaction.response.send_message("This command can not be used in threads, sorry! 🫠", ephemeral=True)
@@ -193,6 +315,14 @@ class Akinatoror(commands.Cog):
                 await thread.edit(archived=True, locked=True)
             except discord.HTTPException:
                 pass
+
+    @app_commands.command(name="aki", description="Begins a game of Akinator.")
+    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def aki(self, interaction: discord.Interaction):
+        if interaction.guild is None:
+            await self.dm_cmd(interaction)
+        else:
+            await self.server_cmd(interaction)
 
 class _Base(discord.ui.View):
     def __init__(self, owner: discord.User | discord.Member):
