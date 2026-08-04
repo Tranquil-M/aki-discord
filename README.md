@@ -18,7 +18,7 @@ I've been looking for good akinator commands for a discord bot, but couldn't fin
 
 1. Add this repository as a submodule into your desired location:
     ```bash
-    git submodule add https://github.com/Tranquil-M/aki-discord.git cogs/
+    git submodule add https://github.com/Tranquil-M/aki-discord.git cogs/aki-discord
     ```
 2. Load this cog in your main file:
     ```python  
