@@ -335,14 +335,19 @@ class _Base(discord.ui.View):
             1, 1.0, commands.BucketType.user
         )
 
+    async def select(self, interaction, value):
+        await interaction.response.defer()
+        self.ans = value
+        self.stop()
+
     async def on_timeout(self):
         self.timed_out = True
         self.stop()
-        
+
         for item in self.children:
             if isinstance(item, discord.ui.Button):
                 item.disabled = True
-                
+
         if self.game_message:
             try:
                 embed = self.game_message.embeds[0]
@@ -371,22 +376,17 @@ class _Base(discord.ui.View):
           return False
         return True     
 
-
 class WinCheck(_Base):
     def __init__(self, owner: discord.User | discord.Member):
             super().__init__(owner)
 
     @discord.ui.button(label="Correct", style=discord.ButtonStyle.primary)
     async def callback_win(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = True
-        self.stop()
-     
+        await self.select(interaction, True)
+             
     @discord.ui.button(label="Incorrect", style=discord.ButtonStyle.primary)
     async def callback_loss(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = False
-        self.stop()
+        await self.select(interaction, False)
 
 class ChildmodeSelection(_Base):
     def __init__(self, owner: discord.User | discord.Member):
@@ -394,25 +394,11 @@ class ChildmodeSelection(_Base):
 
     @discord.ui.button(label="Yes", style=discord.ButtonStyle.primary)
     async def callback_yes(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = True
-
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-
-        self.stop()
+        await self.select(interaction, True)
      
     @discord.ui.button(label="No", style=discord.ButtonStyle.primary)
     async def callback_no(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = False
-
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-
-        self.stop()
+        await self.select(interaction, False)
 
 class GamemodeSelection(_Base):
     def __init__(self, owner: discord.User | discord.Member):
@@ -420,36 +406,15 @@ class GamemodeSelection(_Base):
 
     @discord.ui.button(label="Characters", style=discord.ButtonStyle.primary)
     async def callback_char(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "c" 
-
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-
-        self.stop()
+        await self.select(interaction, "c")
      
     @discord.ui.button(label="Animals", style=discord.ButtonStyle.primary)
     async def callback_irs(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "a" 
-
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-
-        self.stop()
+        await self.select(interaction, "a")
       
     @discord.ui.button(label="Objects", style=discord.ButtonStyle.primary)
     async def callback_obj(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "o" 
-
-        for item in self.children:
-            if isinstance(item, discord.ui.Button):
-                item.disabled = True
-
-        self.stop()
+        await self.select(interaction, "o")
 
 class QuestionInterface(_Base):
     def __init__(self, owner: discord.User | discord.Member, aki):
@@ -460,39 +425,27 @@ class QuestionInterface(_Base):
 
     @discord.ui.button(label="Yes", style=discord.ButtonStyle.primary, emoji="✅")
     async def callback_yes(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "yes"
-        self.stop()
+        await self.select(interaction, "yes")
      
     @discord.ui.button(label="No", style=discord.ButtonStyle.primary, emoji="👎")
     async def callback_no(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "no"
-        self.stop()
-      
+        await self.select(interaction, "no")
+
     @discord.ui.button(label="Don't Know", style=discord.ButtonStyle.primary, emoji="🤷")
     async def callback_idk(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "idk"
-        self.stop()
+        await self.select(interaction, "idk")
       
     @discord.ui.button(label="Probably", style=discord.ButtonStyle.primary, emoji="🤷‍♀️")
     async def callback_prob(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "probably"
-        self.stop()
+        await self.select(interaction, "probably")
       
     @discord.ui.button(label="Probably Not", style=discord.ButtonStyle.primary, emoji="🤷‍♂️")
     async def callback_probn(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "probably not"
-        self.stop()
+        await self.select(interaction, "probably not")
 
     @discord.ui.button(label="Go Back", style=discord.ButtonStyle.primary, emoji="⬅️")
     async def callback_back(self, interaction: discord.Interaction, button: discord.ui.Button):
-        await interaction.response.defer()
-        self.ans = "back"
-        self.stop()
+        await self.select(interaction, "back")
      
 async def setup(bot):
     await bot.add_cog(Akinatoror(bot))
