@@ -2,7 +2,6 @@ import asyncio
 from datetime import datetime, timezone
 from collections import deque
 import discord
-import akipy
 from akipy.async_akinator import Akinator
 from discord import app_commands
 from discord.ext import commands
@@ -23,141 +22,105 @@ class Akinatoror(commands.Cog):
             )
 
     async def main_loop(self, interaction, game_mode: str, child_mode: bool, game_message = None, thread: discord.Thread = None):
-        try:
-            aki = Akinator()
-            messages = deque(maxlen=2)
+        aki = Akinator()
+        messages = deque(maxlen=2)
 
-            await aki.start_game(game_mode=game_mode, child_mode=child_mode)
-            
-            if game_message and thread is None:
-                while not aki.win:
-                    embed = discord.Embed(
-                        title=str(aki),
-                        description="You have 30 seconds to select an answer.",
-                        color=discord.Color.blue(),
-                    )
+        await aki.start_game(game_mode=game_mode, child_mode=child_mode)
+        while not aki.win:
+            embed = discord.Embed(
+                title=str(aki),
+                description="You have 30 seconds to select an answer.",
+                color=discord.Color.blue(),
+            )
+                                           
+            selection = QuestionInterface(interaction.user, aki)
 
-                    selection = QuestionInterface(interaction.user, aki)
-                    await game_message.edit(
-                        embed=embed,
-                        view=selection
-                    )
-
-                    selection.game_message = game_message
-                    await selection.wait()
-
-                    if selection.ans is None:
-                        return "timeout"
-
-                    if selection.ans == "back":
-                        await aki.back()
-                        continue
-
-                    await aki.answer(selection.ans)
-
-                embed = discord.Embed(
-                    title=str(aki),
-                    description=aki.description_proposition,
-                    color=discord.Color.yellow(),
-                )
-                embed.set_image(url=aki.photo)
-
-                win_check = WinCheck(interaction.user)
-
+            if game_message is not None:
                 await game_message.edit(
                     embed=embed,
-                    view=win_check,
+                    view=selection
                 )
-
-                win_check.game_message = game_message
-                await win_check.wait()
-
-                if win_check.ans is None:
-                    return "timeout"
-
-                if win_check.ans:
-                    embed.color = discord.Color.green()
-                    embed.set_footer(text="✅ Correct")
-                else:
-                    embed.color = discord.Color.red()
-                    embed.set_footer(text="👎 Incorrect")
-
-                await game_message.edit(
-                    embed=embed,
-                    view=None,
-                )
-
-                return win_check.ans
-
-            while not aki.win:
-                message_embed = discord.Embed(
-                    title = str(aki),
-                    description="You have 30 seconds to select an answer.",
-                    color = discord.Color.blue(),
-                )
-
+                                           
+                selection.game_message = game_message
+            else:
                 await self.edit_last_question(messages)
-
-                selection = QuestionInterface(interaction.user, aki)
 
                 question = {
                     "message": await thread.send(
-                        embed=message_embed,
+                        embed=embed,
                         view=selection,
                     ),
                     "question": str(aki),
                     "choice": None,
                 }
-                
-                await selection.wait()
 
-                if selection.timed_out or selection.ans is None:
-                    return "timeout"
+                selection.game_message = question["message"]
 
+            await selection.wait()
+
+            if selection.ans is None:
+                return "timeout"
+
+            if game_message is None:
                 question["choice"] = selection.ans
-
                 messages.append(question)
+                                           
+            if selection.ans == "back":
+                await aki.back()
 
-                if selection.ans == "back":
-                    await aki.back()
+                if game_message is None:
                     await messages[-1]["message"].delete()
                     await messages[-2]["message"].delete()
                     messages.clear()
-                    continue
 
-                await aki.answer(selection.ans)
+                continue
+                                           
+            await aki.answer(selection.ans)
 
-            await self.edit_last_question(messages)
+        embed = discord.Embed(
+            title=str(aki),
+            description=aki.description_proposition,
+            color=discord.Color.yellow(),
+        )
+        embed.set_image(url=aki.photo)
 
-            message_embed = discord.Embed(
-                title = str(aki),
-                description = aki.description_proposition,
-                color = discord.Color.yellow()
+        win_check = WinCheck(interaction.user)
+
+        if game_message is not None:
+            await game_message.edit(
+                embed=embed,
+                view=win_check,
             )
-            message_embed.set_image(url = aki.photo)
 
-            win_check = WinCheck(interaction.user)
-            proposition = await thread.send(embed=message_embed, view=win_check)
+            win_check.game_message = game_message
+        else:
+            await self.edit_last_question(messages)
+            proposition = await thread.send(embed=embed, view=win_check)
+            win_check.game_message = proposition
 
-            await win_check.wait()
+        await win_check.wait()
 
-            if win_check.ans is None:
-                return "timeout"
+        if win_check.ans is None:
+            return "timeout"
 
-            if win_check.ans == True:
-                message_embed.set_footer(text="✅ Correct")
-                message_embed.color = discord.Color.green()
-            else:
-                message_embed.set_footer(text="👎 Incorrect")
-                message_embed.color = discord.Color.red()
+        if win_check.ans:
+            embed.color = discord.Color.green()
+            embed.set_footer(text="✅ Correct")
+        else:
+            embed.color = discord.Color.red()
+            embed.set_footer(text="👎 Incorrect")
 
-            await proposition.edit(embed=message_embed, view=None)
+        if game_message is not None:
+            await game_message.edit(
+                embed=embed,
+                view=None,
+            )
+        else:
+            await proposition.edit(embed=embed, view=None)
 
-            return win_check.ans
+        return win_check.ans
 
-        except Exception as e:
-            print(e)
-            return None
+
 
     @commands.Cog.listener()
     async def on_ready(self):
@@ -196,7 +159,7 @@ class Akinatoror(commands.Cog):
             return
 
         while True:
-            result = await self.main_loop(interaction, mode.ans, child.ans, setup_message)
+            result = await self.main_loop(interaction, game_mode = mode.ans, child_mode = child.ans, game_message = setup_message, thread = None)
             if result:
                 break
             elif result == False:
@@ -277,11 +240,12 @@ class Akinatoror(commands.Cog):
             await last_message.edit(embed=message_embed, view=None)
 
             while True:
-                result = await self.main_loop(interaction, thread, mode.ans, child.ans)
+                result = await self.main_loop(interaction, mode.ans, child.ans, thread = thread)
                 if result == True:
                     await thread.send(f"I'm just that cool 😎")
                     break
                 elif result == False:
+                    await asyncio.sleep(1.5)
                     await thread.send(f"Damn it! Let me try again...")
                 elif result == "timeout":
                     break
